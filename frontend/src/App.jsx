@@ -5,21 +5,33 @@ import UserManagement from './components/UserManagement';
 
 function App() {
   const [activeTab, setActiveTab] = useState('qrcode');
+  const [users, setUsers] = useState(() => {
+    try {
+      const storedUsers = localStorage.getItem('managedUsers');
+      if (storedUsers) return JSON.parse(storedUsers);
+    } catch (e) {
+      console.error(e);
+    }
+    return [];
+  });
+
   const [selectedUsers, setSelectedUsers] = useState(() => {
     try {
       const storedSelected = localStorage.getItem('selectedUsers');
       if (storedSelected) {
         return JSON.parse(storedSelected);
       }
-      const storedUsers = localStorage.getItem('managedUsers');
-      if (storedUsers) {
-        return JSON.parse(storedUsers);
-      }
+      return [];
     } catch (e) {
       console.error(e);
     }
     return [];
   });
+
+  // Save users to localStorage when updated
+  useEffect(() => {
+    localStorage.setItem('managedUsers', JSON.stringify(users));
+  }, [users]);
 
   useEffect(() => {
     localStorage.setItem('selectedUsers', JSON.stringify(selectedUsers));
@@ -27,8 +39,65 @@ function App() {
 
   // Handle initial hash and hash changes
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleHashChange = async () => {
       const hash = window.location.hash.slice(1); // Remove '#'
+
+      // Import logic: #import:user1,user2,user3
+      if (hash.startsWith('import:')) {
+        const rawList = hash.substring(7);
+        if (rawList) {
+          const candidates = rawList.split(',').map(u => u.trim()).filter(u => u !== '');
+          if (candidates.length > 0) {
+            const verified = [];
+            const failed = [];
+
+            for (const username of candidates) {
+              try {
+                const response = await fetch(`/api/users/check?username=${encodeURIComponent(username)}`);
+                const data = await response.json();
+                if (data.exists) {
+                  verified.push(username);
+                } else {
+                  failed.push(username);
+                }
+              } catch (e) {
+                failed.push(username);
+              }
+            }
+
+            if (verified.length > 0) {
+              // Merge into managed users
+              setUsers(prev => {
+                const next = [...prev];
+                verified.forEach(u => {
+                  if (!next.includes(u)) next.push(u);
+                });
+                return next;
+              });
+              // Auto-select them
+              setSelectedUsers(prev => {
+                const next = [...prev];
+                verified.forEach(u => {
+                  if (!next.includes(u)) next.push(u);
+                });
+                return next;
+              });
+            }
+
+            // Move to users tab
+            setActiveTab('users');
+            window.location.hash = 'users';
+
+            let report = `VERIFIED & IMPORTED ${verified.length} USERS.`;
+            if (failed.length > 0) {
+              report += `\nFAILED (NOT IN CONFIG): ${failed.join(', ')}`;
+            }
+            alert(report);
+            return;
+          }
+        }
+      }
+
       if (hash === 'code') {
         setActiveTab('code');
       } else if (hash === 'users') {
@@ -89,7 +158,12 @@ function App() {
             <AttendanceCodeSignIn selectedUsers={selectedUsers} />
           </div>
           <div style={{ display: activeTab === 'users' ? 'block' : 'none' }}>
-            <UserManagement selectedUsers={selectedUsers} setSelectedUsers={setSelectedUsers} />
+            <UserManagement
+              users={users}
+              setUsers={setUsers}
+              selectedUsers={selectedUsers}
+              setSelectedUsers={setSelectedUsers}
+            />
           </div>
         </div>
       </div>

@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE = '';
 
-const UserManagement = ({ selectedUsers, setSelectedUsers }) => {
-    const [users, setUsers] = useState(() => {
-        try {
-            const storedUsers = localStorage.getItem('managedUsers');
-            if (storedUsers) return JSON.parse(storedUsers);
-        } catch (e) {
-            console.error(e);
-        }
-        return [];
-    });
+const UserManagement = ({ users, setUsers, selectedUsers, setSelectedUsers }) => {
     const [newUsername, setNewUsername] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
@@ -25,10 +16,28 @@ const UserManagement = ({ selectedUsers, setSelectedUsers }) => {
     const [modalLoading, setModalLoading] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
 
-    // Save users to localStorage when updated
-    useEffect(() => {
-        localStorage.setItem('managedUsers', JSON.stringify(users));
-    }, [users]);
+    const handleShare = () => {
+        if (selectedUsers.length === 0) {
+            alert('NO USERS SELECTED TO SHARE');
+            return;
+        }
+        const baseUrl = window.location.origin + window.location.pathname;
+        const shareUrl = `${baseUrl}#import:${selectedUsers.join(',')}`;
+
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            alert('SHARE LINK COPIED TO CLIPBOARD');
+        }).catch(err => {
+            console.error('Could not copy text: ', err);
+            // Fallback for non-secure contexts
+            const input = document.createElement('input');
+            input.value = shareUrl;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            alert('SHARE LINK COPIED (FALLBACK)');
+        });
+    };
 
     const handleAddUser = async (e) => {
         e.preventDefault();
@@ -168,7 +177,24 @@ const UserManagement = ({ selectedUsers, setSelectedUsers }) => {
             </div>
 
             <div style={{ marginTop: '2rem' }}>
-                <h3 style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1rem' }}>ACTIVE USERS ({users.length})</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ fontSize: '0.9rem', opacity: 0.8, margin: 0 }}>ACTIVE USERS ({users.length})</h3>
+                    {selectedUsers.length > 0 && (
+                        <button
+                            onClick={handleShare}
+                            style={{
+                                width: 'auto',
+                                padding: '4px 12px',
+                                fontSize: '0.7rem',
+                                background: 'rgba(212, 175, 55, 0.15)',
+                                color: 'var(--gold-primary)',
+                                border: '1px solid rgba(212, 175, 55, 0.3)'
+                            }}
+                        >
+                            SHARE SELECTED
+                        </button>
+                    )}
+                </div>
                 <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '1rem' }}>Selected users will be processed during sign-in.</p>
 
                 {users.length === 0 ? (

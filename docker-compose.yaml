@@ -13,7 +13,7 @@ services:
   frontend:
     image: nginx:latest
     ports:
-      - "19080:80"
+      - "25040:80"
     volumes:
       - ./frontend/dist:/usr/share/nginx/html:ro
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
