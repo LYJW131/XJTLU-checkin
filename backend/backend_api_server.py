@@ -19,7 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-CONFIG_FILE = Path(__file__).parent.parent / "data" / "config.yaml"
+import os
+
+CONFIG_FILE = Path(os.environ.get("CONFIG_PATH", Path(__file__).parent.parent / "data" / "config.yaml"))
 
 def load_config():
     if not CONFIG_FILE.exists():

@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pyyaml
+requests
+pyotp
+cryptography
+loguru
+httpx

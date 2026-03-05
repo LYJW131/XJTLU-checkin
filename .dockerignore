@@ -1,0 +1,8 @@
+node_modules
+.git
+__pycache__
+*.pyc
+data/cache
+data/config.yaml
+*.log
+.DS_Store
