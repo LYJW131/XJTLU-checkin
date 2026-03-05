@@ -1,0 +1,5 @@
+allow_registration: true
+users:
+  - username: "YOUR_USERNAME"
+    password: "YOUR_PASSWORD"
+    otp_url: "otpauth://totp/YOUR_OTP_URL"

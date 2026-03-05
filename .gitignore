@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Sensitive config (contains credentials)
+data/config.yaml
+
+# Cache data
+data/cache/
+
+# Logs
+*.log
+backend/*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build output
+frontend/dist/
