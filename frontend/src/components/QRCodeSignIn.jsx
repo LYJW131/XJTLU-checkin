@@ -13,6 +13,12 @@ const QRCodeSignIn = ({ isActive, selectedUsers }) => {
     const fileInputRef = useRef(null);
     const touchStartDist = useRef(null);
     const startZoom = useRef(1);
+    const selectedUsersRef = useRef(selectedUsers);
+
+    // Sync ref with latest prop
+    useEffect(() => {
+        selectedUsersRef.current = selectedUsers;
+    }, [selectedUsers]);
 
     // Stable handleSignIn without dependencies
     const handleSignIn = useCallback(async (url) => {
@@ -31,7 +37,7 @@ const QRCodeSignIn = ({ isActive, selectedUsers }) => {
                 },
                 body: JSON.stringify({
                     qrcode_url: url,
-                    usernames: selectedUsers || []
+                    usernames: selectedUsersRef.current || []
                 }),
             });
 
