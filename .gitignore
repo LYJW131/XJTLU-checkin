@@ -23,3 +23,6 @@ Thumbs.db
 
 # Build output
 frontend/dist/
+
+# Test files
+test/

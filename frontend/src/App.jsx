@@ -65,6 +65,10 @@ function App() {
               }
             }
 
+            // Check if any verified users are actually new
+            const newUsers = verified.filter(u => !users.includes(u));
+            const newUsersAdded = newUsers.length > 0;
+
             if (verified.length > 0) {
               // Merge into managed users
               setUsers(prev => {
@@ -74,6 +78,7 @@ function App() {
                 });
                 return next;
               });
+
               // Auto-select them
               setSelectedUsers(prev => {
                 const next = [...prev];
@@ -84,15 +89,18 @@ function App() {
               });
             }
 
-            // Move to users tab
-            setActiveTab('users');
-            window.location.hash = 'users';
+            // Only jump and alert if new users were added or if there were failures
+            if (newUsersAdded || failed.length > 0) {
+              // Move to users tab
+              setActiveTab('users');
+              window.location.hash = 'users';
 
-            let report = `VERIFIED & IMPORTED ${verified.length} USERS.`;
-            if (failed.length > 0) {
-              report += `\nFAILED (NOT IN CONFIG): ${failed.join(', ')}`;
+              let report = `VERIFIED & IMPORTED ${verified.length} USERS.`;
+              if (failed.length > 0) {
+                report += `\nFAILED (NOT IN CONFIG): ${failed.join(', ')}`;
+              }
+              alert(report);
             }
-            alert(report);
             return;
           }
         }

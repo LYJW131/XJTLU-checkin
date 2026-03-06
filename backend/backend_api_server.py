@@ -6,9 +6,27 @@ from pydantic import BaseModel
 import asyncio
 from typing import List
 import uvicorn
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 import logging
+from logConfig import get_logger
 
-app = FastAPI(title="Sign In Service API")
+logger = get_logger("API_SERVER")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start the background scheduler
+    task = asyncio.create_task(cookie_refresh_scheduler())
+    logger.info("Background cookie refresh scheduler started")
+    yield
+    # Cleanup
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        logger.info("Background cookie refresh scheduler stopped")
+
+app = FastAPI(title="Sign In Service API", lifespan=lifespan)
 
 # Add CORS middleware to allow the frontend to access the API
 app.add_middleware(
@@ -41,6 +59,50 @@ class RegisterUserRequest(BaseModel):
     username: str
     password: str
     otp_url: str
+
+async def cookie_refresh_scheduler():
+    """Daily background task to refresh UIM cookies at 03:00 AM"""
+    while True:
+        try:
+            now = datetime.now()
+            # Calculate target time: 03:00 AM
+            target = now.replace(hour=3, minute=0, second=0, microsecond=0)
+            if now >= target:
+                target += timedelta(days=1)
+            
+            sleep_seconds = (target - now).total_seconds()
+            logger.info(f"Next scheduled cookie refresh at {target.strftime('%Y-%m-%d %H:%M:%S')} (in {sleep_seconds/3600:.2f} hours)")
+            
+            await asyncio.sleep(sleep_seconds)
+            
+            # Start refreshing
+            logger.info("Starting scheduled cookie refresh for all users...")
+            config = load_config()
+            users = config.get("users", [])
+            
+            from uimLogin import uim_login_for_user
+            
+            for user_config in users:
+                uname = user_config.get("username")
+                logger.info(f"Refreshing cookies for user: {uname}")
+                # Run in thread to avoid blocking the event loop
+                success = await asyncio.to_thread(uim_login_for_user, user_config)
+                if success:
+                    logger.success(f"Successfully refreshed cookies for {uname}")
+                else:
+                    logger.error(f"Failed to refresh cookies for {uname}")
+                
+                # Wait 5 minutes before next user as requested
+                logger.debug(f"Waiting 5 minutes before next refresh...")
+                await asyncio.sleep(300)
+            
+            logger.info("Daily scheduled cookie refresh completed")
+            
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error(f"Error in cookie refresh scheduler: {e}")
+            await asyncio.sleep(60) # Wait a bit before retrying on error
 
 @app.get("/api/users/check")
 async def check_user(username: str):
@@ -91,23 +153,21 @@ async def sign_in_qr(req: QrSignInRequest):
     config = load_config()
     users = config.get("users", [])
     
-    results = []
-    
-    for username in req.usernames:
+    async def process_user(username):
         user_config = next((u for u in users if u.get("username") == username), None)
         if not user_config:
-            results.append({"username": username, "status": "error", "message": "User not configured"})
-            continue
-            
-        success, message, data = sign_in_for_user(req.qrcode_url, user_config)
-        results.append({
+            return {"username": username, "status": "error", "message": "User not configured"}
+        
+        success, message, data = await asyncio.to_thread(sign_in_for_user, req.qrcode_url, user_config)
+        return {
             "username": username,
             "status": "success" if success else "error",
             "message": message,
             "data": data
-        })
-        
-    return {"success": True, "results": results}
+        }
+    
+    results = await asyncio.gather(*[process_user(u) for u in req.usernames])
+    return {"success": True, "results": list(results)}
 
 @app.post("/api/attendancecode")
 async def sign_in_code(req: AttendanceCodeSignInRequest):
@@ -116,23 +176,21 @@ async def sign_in_code(req: AttendanceCodeSignInRequest):
     config = load_config()
     users = config.get("users", [])
     
-    results = []
-    
-    for username in req.usernames:
+    async def process_user(username):
         user_config = next((u for u in users if u.get("username") == username), None)
         if not user_config:
-            results.append({"username": username, "status": "error", "message": "User not configured"})
-            continue
-            
-        success, message, data = sign_in_with_auto_token_for_user(req.code, user_config)
-        results.append({
+            return {"username": username, "status": "error", "message": "User not configured"}
+        
+        success, message, data = await asyncio.to_thread(sign_in_with_auto_token_for_user, req.code, user_config)
+        return {
             "username": username,
             "status": "success" if success else "error",
             "message": message,
             "data": data
-        })
-        
-    return {"success": True, "results": results}
+        }
+    
+    results = await asyncio.gather(*[process_user(u) for u in req.usernames])
+    return {"success": True, "results": list(results)}
 
 if __name__ == "__main__":
     uvicorn.run("backend_api_server:app", host="127.0.0.1", port=8000, reload=True)
