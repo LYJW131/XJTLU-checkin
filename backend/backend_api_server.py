@@ -161,9 +161,13 @@ async def sign_in_qr(req: QrSignInRequest):
         
         success, message, data = await asyncio.to_thread(sign_in_for_user, req.qrcode_url, user_config)
         
-        # Send Bark notification
         if success:
-            notify(f"签到成功 - {username}", f"二维码签到: {message}\n课程: {data.get('courseName', 'N/A')}")
+            course = data.get('moduleTypeGroup', 'N/A') if data else 'N/A'
+            room = data.get('room', '') if data else ''
+            body = f"二维码签到: {message}\n课程: {course}"
+            if room:
+                body += f"\n教室: {room}"
+            notify(f"签到成功 - {username}", body)
         else:
             notify(f"签到失败 - {username}", f"错误信息: {message}")
 
