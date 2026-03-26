@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 import logging
 from logConfig import get_logger
+from barkNotify import notify
 
 logger = get_logger("API_SERVER")
 
@@ -159,6 +160,13 @@ async def sign_in_qr(req: QrSignInRequest):
             return {"username": username, "status": "error", "message": "User not configured"}
         
         success, message, data = await asyncio.to_thread(sign_in_for_user, req.qrcode_url, user_config)
+        
+        # Send Bark notification
+        if success:
+            notify(f"签到成功 - {username}", f"二维码签到: {message}\n课程: {data.get('courseName', 'N/A')}")
+        else:
+            notify(f"签到失败 - {username}", f"错误信息: {message}")
+
         return {
             "username": username,
             "status": "success" if success else "error",
@@ -182,6 +190,13 @@ async def sign_in_code(req: AttendanceCodeSignInRequest):
             return {"username": username, "status": "error", "message": "User not configured"}
         
         success, message, data = await asyncio.to_thread(sign_in_with_auto_token_for_user, req.code, user_config)
+
+        # Send Bark notification
+        if success:
+            notify(f"签到成功 - {username}", f"签到码为: {req.code}\n反馈: {message}")
+        else:
+            notify(f"签到失败 - {username}", f"签到码: {req.code}\n错误: {message}")
+
         return {
             "username": username,
             "status": "success" if success else "error",

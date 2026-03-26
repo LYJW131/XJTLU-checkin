@@ -6,3 +6,4 @@ pyotp
 cryptography
 loguru
 httpx
+backoff

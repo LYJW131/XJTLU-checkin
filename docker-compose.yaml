@@ -8,6 +8,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - CONFIG_PATH=/data/config.yaml
+      - BARK_DEVICE_KEY=sRS7iKLYymaQWEpaU6WBK9
+      - BARK_SERVER_URL=http://192.168.3.5:20040/bark
     restart: unless-stopped
 
   frontend:
