@@ -171,7 +171,7 @@ async def sign_in_qr(req: QrSignInRequest):
             "username": username,
             "status": "success" if success else "error",
             "message": message,
-            "data": data
+            "data": data if data is not None else {}
         }
     
     results = await asyncio.gather(*[process_user(u) for u in req.usernames])
@@ -201,7 +201,7 @@ async def sign_in_code(req: AttendanceCodeSignInRequest):
             "username": username,
             "status": "success" if success else "error",
             "message": message,
-            "data": data
+            "data": data if data is not None else {}
         }
     
     results = await asyncio.gather(*[process_user(u) for u in req.usernames])

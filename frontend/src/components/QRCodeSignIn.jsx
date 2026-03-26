@@ -481,9 +481,38 @@ const QRCodeSignIn = ({ isActive, selectedUsers }) => {
                 {scanStarted ? 'CLOSE CAMERA' : 'USE NATIVE CAMERA'}
             </button>
 
+            {/* Course info card - from first result with valid data */}
+            {results.length > 0 && (() => {
+                const info = results.find(r => r.data && r.data.moduleDate);
+                if (!info) return null;
+                const d = info.data;
+                return (
+                    <div style={{
+                        marginTop: '1rem',
+                        padding: '12px 16px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--gold-dim)',
+                        background: 'rgba(212, 175, 55, 0.06)',
+                        textAlign: 'left',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.8rem',
+                        lineHeight: 1.7,
+                        color: 'var(--text-secondary)',
+                    }}>
+                        <div style={{ color: 'var(--gold-primary)', fontWeight: 600, marginBottom: '6px', fontSize: '0.85rem' }}>
+                            {d.moduleTypeGroup}
+                        </div>
+                        <div>{d.moduleDate} &nbsp; {d.moduleTime}</div>
+                        <div style={{ color: 'var(--text-secondary)', opacity: 0.7, fontSize: '0.75rem' }}>
+                            签到时间: {d.signTime}
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* Per-user result cards */}
             {results.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '0.5rem' }}>
                     {results.map((r, i) => {
                         const isOk = r.status === 'success';
                         return (
